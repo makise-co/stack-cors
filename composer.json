@@ -1,14 +1,18 @@
 {
-    "name": "asm89/stack-cors",
+    "name": "makise-co/stack-cors",
     "description": "Cross-origin resource sharing library and stack middleware",
-    "keywords": ["stack", "cors"],
-    "homepage": "https://github.com/asm89/stack-cors",
+    "keywords": ["makise-co", "makise", "cors"],
+    "homepage": "https://github.com/makise-co/stack-cors",
     "type": "library",
     "license": "MIT",
     "authors": [
         {
             "name": "Alexander",
             "email": "iam.asm89@gmail.com"
+        },
+        {
+            "name": "Dmitry K.",
+            "email": "coder1994@gmail.com"
         }
     ],
     "require": {

@@ -39,7 +39,7 @@ class CorsService
             'allowedHeaders' => [],
             'exposedHeaders' => [],
             'allowedMethods' => [],
-            'maxAge' => 0,
+            'maxAge' => '0',
         ];
 
         // normalize array('*') to true
@@ -56,6 +56,10 @@ class CorsService
             $options['allowedMethods'] = true;
         } else {
             $options['allowedMethods'] = array_map('strtoupper', $options['allowedMethods']);
+        }
+
+        if (null !== $options['maxAge']) {
+            $options['maxAge'] = (string)$options['maxAge'];
         }
 
         return $options;
@@ -210,7 +214,7 @@ class CorsService
     private function configureMaxAge(Response $response, Request $request): void
     {
         if ($this->options['maxAge'] !== null) {
-            $response->headers->set('Access-Control-Max-Age', (int)$this->options['maxAge']);
+            $response->headers->set('Access-Control-Max-Age', $this->options['maxAge']);
         }
     }
 

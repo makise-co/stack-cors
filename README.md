@@ -50,38 +50,38 @@ return [
     /*
     * Matches the request method. `[*]` allows all methods.
     */
-    'allowed_methods' => ['*'],
+    'allowedMethods' => ['*'],
 
     /*
      * Matches the request origin. `[*]` allows all origins.
      */
-    'allowed_origins' => ['*'],
+    'allowedOrigins' => ['*'],
 
     /*
      * Matches the request origin with, similar to `Request::is()`
      */
-    'allowed_origins_patterns' => [],
+    'allowedOriginsPatterns' => [],
 
     /*
      * Sets the Access-Control-Allow-Headers response header. `[*]` allows all headers.
      */
-    'allowed_headers' => ['*'],
+    'allowedHeaders' => ['*'],
 
     /*
      * Sets the Access-Control-Expose-Headers response header.
      */
-    'exposed_headers' => false,
+    'exposedHeaders' => false,
 
     /*
      * Sets the Access-Control-Max-Age response header.
      */
-    'max_age' => 600,
+    'maxAge' => 600,
 
     /*
      * Sets the Access-Control-Allow-Credentials header.
      */
-    'supports_credentials' => true,
-    
+    'supportsCredentials' => true,
+
 ];
 ```
 

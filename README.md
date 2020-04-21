@@ -1,4 +1,5 @@
 # Stack/Cors
+Fork of https://github.com/asm89/stack-cors that allows to use original package in the Makise Framework.
 
 Library and middleware enabling cross-origin resource sharing for your
 http-{foundation,kernel} using application. It attempts to implement the
@@ -10,13 +11,13 @@ Build status: ![.github/workflows/run-tests.yml](https://github.com/asm89/stack-
 
 ## Installation
 
-Require `asm89/stack-cors` using composer.
+Require `makise-co/stack-cors` using composer.
 
 ## Usage
 
-This package can be used as a library or as [stack middleware].
-
-[stack middleware]: http://stackphp.com/
+* Create `cors.php` config in your config directory
+* Add `CorsServiceProvider` to the `config/app.php` "providers" section
+* Add `CorsMiddleware` to the `config/http.php` "middleware" section
 
 ### Options
 
@@ -35,6 +36,54 @@ The _allowedMethods_ and _allowedHeaders_ options are case-insensitive.
 You don't need to provide both _allowedOrigins_ and _allowedOriginsPatterns_. If one of the strings passed matches, it is considered a valid origin.
 
 If `array('*')` is provided to _allowedMethods_, _allowedOrigins_ or _allowedHeaders_ all methods / origins / headers are allowed.
+
+### Example: config that allows CORS on all paths
+```php
+return [
+
+    /*
+     * You can enable CORS for 1 or multiple paths.
+     * Example: ['api/*']
+     */
+    'paths' => ['*'],
+
+    /*
+    * Matches the request method. `[*]` allows all methods.
+    */
+    'allowed_methods' => ['*'],
+
+    /*
+     * Matches the request origin. `[*]` allows all origins.
+     */
+    'allowed_origins' => ['*'],
+
+    /*
+     * Matches the request origin with, similar to `Request::is()`
+     */
+    'allowed_origins_patterns' => [],
+
+    /*
+     * Sets the Access-Control-Allow-Headers response header. `[*]` allows all headers.
+     */
+    'allowed_headers' => ['*'],
+
+    /*
+     * Sets the Access-Control-Expose-Headers response header.
+     */
+    'exposed_headers' => false,
+
+    /*
+     * Sets the Access-Control-Max-Age response header.
+     */
+    'max_age' => 600,
+
+    /*
+     * Sets the Access-Control-Allow-Credentials header.
+     */
+    'supports_credentials' => true,
+    
+];
+```
 
 ### Example: using the library
 
@@ -60,24 +109,3 @@ $cors->isCorsRequest(Request $request);
 $cors->isPreflightRequest(Request $request);
 ```
 
-## Example: using the stack middleware
-
-```php
-<?php
-
-use Asm89\Stack\Cors;
-
-$app = new Cors($app, array(
-    // you can use array('*') to allow any headers
-    'allowedHeaders'      => array('x-allowed-header', 'x-other-allowed-header'),
-    // you can use array('*') to allow any methods
-    'allowedMethods'      => array('DELETE', 'GET', 'POST', 'PUT'),
-    // you can use array('*') to allow requests from any origin
-    'allowedOrigins'      => array('localhost'),
-    // you can enter regexes that are matched to the origin request header
-    'allowedOriginsPatterns' => array('/localhost:\d/'),
-    'exposedHeaders'      => false,
-    'maxAge'              => false,
-    'supportsCredentials' => false,
-));
-```

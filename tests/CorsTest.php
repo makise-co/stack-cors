@@ -13,8 +13,8 @@ namespace Asm89\Stack\Tests;
 
 use Asm89\Stack\CorsMiddleware;
 use Asm89\Stack\CorsService;
-use MakiseCo\Http\Request;
-use MakiseCo\Http\Response;
+use Laminas\Diactoros\Response\TextResponse;
+use Laminas\Diactoros\ServerRequest;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -29,9 +29,9 @@ class CorsTest extends TestCase
     {
         $app = $this->createStackedApp();
 
-        $response = $app->process(new Request(), $this->getRequestHandler([]));
+        $response = $app->process(new ServerRequest(), $this->getRequestHandler([]));
 
-        $this->assertEquals('http://localhost', $response->headers->get('Access-Control-Allow-Origin'));
+        $this->assertEquals('http://localhost', $response->getHeaderLine('Access-Control-Allow-Origin'));
     }
 
     /**
@@ -40,14 +40,13 @@ class CorsTest extends TestCase
     public function it_does_modify_on_a_request_with_same_origin(): void
     {
         $app = $this->createStackedApp(['allowedOrigins' => ['*']]);
-        $unmodifiedResponse = new Response();
 
-        $request = new Request();
-        $request->headers->set('Host', 'foo.com');
-        $request->headers->set('Origin', 'http://foo.com');
+        $request = (new ServerRequest())
+            ->withHeader('Host', 'foo.com')
+            ->withHeader('Origin', 'http://foo.com');
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertEquals('*', $response->headers->get('Access-Control-Allow-Origin'));
+        $this->assertEquals('*', $response->getHeaderLine('Access-Control-Allow-Origin'));
     }
 
     /**
@@ -60,8 +59,8 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertTrue($response->headers->has('Access-Control-Allow-Origin'));
-        $this->assertEquals('http://localhost', $response->headers->get('Access-Control-Allow-Origin'));
+        $this->assertTrue($response->hasHeader('Access-Control-Allow-Origin'));
+        $this->assertEquals('http://localhost', $response->getHeaderLine('Access-Control-Allow-Origin'));
     }
 
     /**
@@ -70,14 +69,13 @@ class CorsTest extends TestCase
     public function it_returns_allow_origin_header_on_allow_all_origin_request(): void
     {
         $app = $this->createStackedApp(['allowedOrigins' => ['*']]);
-        $request = new Request();
-        $request->headers->set('Origin', 'http://localhost');
+        $request = $this->createValidActualRequest();
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertTrue($response->headers->has('Access-Control-Allow-Origin'));
-        $this->assertEquals('*', $response->headers->get('Access-Control-Allow-Origin'));
+        $this->assertTrue($response->hasHeader('Access-Control-Allow-Origin'));
+        $this->assertEquals('*', $response->getHeaderLine('Access-Control-Allow-Origin'));
     }
 
     /**
@@ -86,13 +84,13 @@ class CorsTest extends TestCase
     public function it_returns_allow_headers_header_on_allow_all_headers_request(): void
     {
         $app = $this->createStackedApp(['allowedHeaders' => ['*']]);
-        $request = $this->createValidPreflightRequest();
-        $request->headers->set('Access-Control-Request-Headers', 'Foo, BAR');
+        $request = $this->createValidPreflightRequest()
+            ->withHeader('Access-Control-Request-Headers', ['Foo', 'BAR']);
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
         $this->assertEquals(204, $response->getStatusCode());
-        $this->assertEquals('*', $response->headers->get('Access-Control-Allow-Headers'));
+        $this->assertEquals('*', $response->getHeaderLine('Access-Control-Allow-Headers'));
     }
 
     /**
@@ -101,15 +99,15 @@ class CorsTest extends TestCase
     public function it_returns_allow_headers_header_on_allow_all_headers_request_credentials(): void
     {
         $app = $this->createStackedApp(['allowedHeaders' => ['*'], 'supportsCredentials' => true]);
-        $request = $this->createValidPreflightRequest();
-        $request->headers->set('Access-Control-Request-Headers', 'Foo, BAR');
+        $request = $this->createValidPreflightRequest()
+            ->withHeader('Access-Control-Request-Headers', ['Foo', 'BAR']);
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
         $this->assertEquals(204, $response->getStatusCode());
-        $this->assertEquals('Foo, BAR', $response->headers->get('Access-Control-Allow-Headers'));
-        $this->assertEquals('Access-Control-Request-Headers, Access-Control-Request-Method',
-            $response->headers->get('Vary'));
+        $this->assertEquals(['Foo', 'BAR'], $response->getHeader('Access-Control-Allow-Headers'));
+        $this->assertEquals('Access-Control-Request-Headers,Access-Control-Request-Method',
+            $response->getHeaderLine('Vary'));
     }
 
     /**
@@ -122,8 +120,8 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertTrue($response->headers->has('Access-Control-Allow-Credentials'));
-        $this->assertEquals('true', $response->headers->get('Access-Control-Allow-Credentials'));
+        $this->assertTrue($response->hasHeader('Access-Control-Allow-Credentials'));
+        $this->assertEquals('true', $response->getHeaderLine('Access-Control-Allow-Credentials'));
     }
 
     /**
@@ -136,7 +134,7 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertFalse($response->headers->has('Access-Control-Allow-Credentials'));
+        $this->assertFalse($response->hasHeader('Access-Control-Allow-Credentials'));
     }
 
     /**
@@ -149,9 +147,9 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertTrue($response->headers->has('Access-Control-Expose-Headers'));
+        $this->assertTrue($response->hasHeader('Access-Control-Expose-Headers'));
         $this->assertEquals('x-exposed-header, x-another-exposed-header',
-            $response->headers->get('Access-Control-Expose-Headers'));
+            $response->getHeaderLine('Access-Control-Expose-Headers'));
     }
 
     /**
@@ -167,8 +165,8 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertTrue($response->headers->has('Vary'));
-        $this->assertEquals('Origin', $response->headers->get('Vary'));
+        $this->assertTrue($response->hasHeader('Vary'));
+        $this->assertEquals('Origin', $response->getHeaderLine('Vary'));
     }
 
     /**
@@ -185,8 +183,8 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertTrue($response->headers->has('Vary'));
-        $this->assertEquals('Origin, Access-Control-Request-Method', $response->headers->get('Vary'));
+        $this->assertTrue($response->hasHeader('Vary'));
+        $this->assertEquals('Origin,Access-Control-Request-Method', $response->getHeaderLine('Vary'));
     }
 
     /**
@@ -201,8 +199,8 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertTrue($response->headers->has('Vary'));
-        $this->assertEquals('Origin', $response->headers->get('Vary'));
+        $this->assertTrue($response->hasHeader('Vary'));
+        $this->assertEquals('Origin', $response->getHeaderLine('Vary'));
     }
 
     /**
@@ -217,7 +215,7 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertFalse($response->headers->has('Vary'));
+        $this->assertFalse($response->hasHeader('Vary'));
     }
 
     /**
@@ -232,8 +230,8 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertEquals('http://localhost', $response->headers->get('Access-Control-Allow-Origin'));
-        $this->assertFalse($response->headers->has('Vary'));
+        $this->assertEquals('http://localhost', $response->getHeaderLine('Access-Control-Allow-Origin'));
+        $this->assertFalse($response->hasHeader('Vary'));
     }
 
     /**
@@ -248,8 +246,8 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertEquals('http://localhost', $response->headers->get('Access-Control-Allow-Origin'));
-        $this->assertTrue($response->headers->has('Vary'));
+        $this->assertEquals('http://localhost', $response->getHeaderLine('Access-Control-Allow-Origin'));
+        $this->assertTrue($response->hasHeader('Vary'));
     }
 
     /**
@@ -268,8 +266,8 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler(['Vary' => 'Content-Type']));
 
-        $this->assertTrue($response->headers->has('Vary'));
-        $this->assertEquals('Content-Type, Origin', $response->headers->get('Vary'));
+        $this->assertTrue($response->hasHeader('Vary'));
+        $this->assertEquals('Content-Type,Origin', $response->getHeaderLine('Vary'));
     }
 
     /**
@@ -278,13 +276,12 @@ class CorsTest extends TestCase
     public function it_returns_access_control_headers_on_cors_request(): void
     {
         $app = $this->createStackedApp();
-        $request = new Request();
-        $request->headers->set('Origin', 'http://localhost');
+        $request = $this->createValidActualRequest();
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertTrue($response->headers->has('Access-Control-Allow-Origin'));
-        $this->assertEquals('http://localhost', $response->headers->get('Access-Control-Allow-Origin'));
+        $this->assertTrue($response->hasHeader('Access-Control-Allow-Origin'));
+        $this->assertEquals('http://localhost', $response->getHeaderLine('Access-Control-Allow-Origin'));
     }
 
     /**
@@ -300,10 +297,10 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertTrue($response->headers->has('Access-Control-Allow-Origin'));
-        $this->assertEquals('http://localhost', $response->headers->get('Access-Control-Allow-Origin'));
-        $this->assertTrue($response->headers->has('Vary'));
-        $this->assertEquals('Origin', $response->headers->get('Vary'));
+        $this->assertTrue($response->hasHeader('Access-Control-Allow-Origin'));
+        $this->assertEquals('http://localhost', $response->getHeaderLine('Access-Control-Allow-Origin'));
+        $this->assertTrue($response->hasHeader('Vary'));
+        $this->assertEquals('Origin', $response->getHeaderLine('Vary'));
     }
 
     /**
@@ -312,12 +309,12 @@ class CorsTest extends TestCase
     public function it_adds_vary_headers_on_preflight_non_preflight_options(): void
     {
         $app = $this->createStackedApp();
-        $request = new Request();
-        $request->setMethod('OPTIONS');
+        $request = (new ServerRequest())
+            ->withMethod('OPTIONS');
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertEquals('Access-Control-Request-Method', $response->headers->get('Vary'));
+        $this->assertEquals('Access-Control-Request-Method', $response->getHeaderLine('Vary'));
     }
 
     /**
@@ -330,9 +327,9 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertTrue($response->headers->has('Access-Control-Allow-Origin'));
-        $this->assertEquals('http://localhost', $response->headers->get('Access-Control-Allow-Origin'));
-        $this->assertEquals('Access-Control-Request-Method', $response->headers->get('Vary'));
+        $this->assertTrue($response->hasHeader('Access-Control-Allow-Origin'));
+        $this->assertEquals('http://localhost', $response->getHeaderLine('Access-Control-Allow-Origin'));
+        $this->assertEquals('Access-Control-Request-Method', $response->getHeaderLine('Vary'));
     }
 
     /**
@@ -346,11 +343,11 @@ class CorsTest extends TestCase
 
         $service = new CorsService($passedOptions);
         $request = $this->createValidActualRequest();
-        $response = new Response();
+        $response = new TextResponse('');
         $service->addActualRequestHeaders($response, $request);
 
-        $this->assertNotEquals($request->headers->get('Origin'),
-            $response->headers->get('Access-Control-Allow-Origin'));
+        $this->assertNotEquals($request->getHeaderLine('Origin'),
+            $response->getHeaderLine('Access-Control-Allow-Origin'));
     }
 
     /**
@@ -365,11 +362,11 @@ class CorsTest extends TestCase
 
         $service = new CorsService($passedOptions);
         $request = $this->createValidActualRequest();
-        $response = new Response();
+        $response = new TextResponse('');
         $service->addActualRequestHeaders($response, $request);
 
-        $this->assertNotEquals($request->headers->get('Origin'),
-            $response->headers->get('Access-Control-Allow-Origin'));
+        $this->assertNotEquals($request->getHeaderLine('Origin'),
+            $response->getHeaderLine('Access-Control-Allow-Origin'));
     }
 
     /**
@@ -382,9 +379,9 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertTrue($response->headers->has('Access-Control-Allow-Methods'));
+        $this->assertTrue($response->hasHeader('Access-Control-Allow-Methods'));
         // it will uppercase the methods
-        $this->assertEquals('GET, PUT', $response->headers->get('Access-Control-Allow-Methods'));
+        $this->assertEquals('GET,PUT', $response->getHeaderLine('Access-Control-Allow-Methods'));
     }
 
     /**
@@ -397,9 +394,9 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertTrue($response->headers->has('Access-Control-Allow-Methods'));
+        $this->assertTrue($response->hasHeader('Access-Control-Allow-Methods'));
         // it will return the Access-Control-Request-Method pass in the request
-        $this->assertEquals('*', $response->headers->get('Access-Control-Allow-Methods'));
+        $this->assertEquals('*', $response->getHeaderLine('Access-Control-Allow-Methods'));
     }
 
     /**
@@ -412,11 +409,11 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertTrue($response->headers->has('Access-Control-Allow-Methods'));
+        $this->assertTrue($response->hasHeader('Access-Control-Allow-Methods'));
         // it will return the Access-Control-Request-Method pass in the request
-        $this->assertEquals('GET', $response->headers->get('Access-Control-Allow-Methods'));
+        $this->assertEquals('GET', $response->getHeaderLine('Access-Control-Allow-Methods'));
         // it should vary this header
-        $this->assertEquals('Access-Control-Request-Method', $response->headers->get('Vary'));
+        $this->assertEquals('Access-Control-Request-Method', $response->getHeaderLine('Vary'));
     }
 
     /**
@@ -426,17 +423,17 @@ class CorsTest extends TestCase
     {
         $app = $this->createStackedApp();
         $requestHeaders = 'X-Allowed-Header, x-other-allowed-header';
-        $request = $this->createValidPreflightRequest();
-        $request->headers->set('Access-Control-Request-Headers', $requestHeaders);
+        $request = $this->createValidPreflightRequest()
+            ->withHeader('Access-Control-Request-Headers', $requestHeaders);
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
         $this->assertEquals(204, $response->getStatusCode());
 
-        $this->assertTrue($response->headers->has('Access-Control-Allow-Headers'));
+        $this->assertTrue($response->hasHeader('Access-Control-Allow-Headers'));
         // the response will have the "allowedHeaders" value passed to Cors rather than the request one
-        $this->assertEquals('x-allowed-header, x-other-allowed-header',
-            $response->headers->get('Access-Control-Allow-Headers'));
+        $this->assertEquals('x-allowed-header,x-other-allowed-header',
+            $response->getHeaderLine('Access-Control-Allow-Headers'));
     }
 
     /**
@@ -449,8 +446,8 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertTrue($response->headers->has('Access-Control-Allow-Credentials'));
-        $this->assertEquals('true', $response->headers->get('Access-Control-Allow-Credentials'));
+        $this->assertTrue($response->hasHeader('Access-Control-Allow-Credentials'));
+        $this->assertEquals('true', $response->getHeaderLine('Access-Control-Allow-Credentials'));
     }
 
     /**
@@ -463,7 +460,7 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertFalse($response->headers->has('Access-Control-Allow-Credentials'));
+        $this->assertFalse($response->hasHeader('Access-Control-Allow-Credentials'));
     }
 
     /**
@@ -476,8 +473,8 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertTrue($response->headers->has('Access-Control-Max-Age'));
-        $this->assertEquals(42, $response->headers->get('Access-Control-Max-Age'));
+        $this->assertTrue($response->hasHeader('Access-Control-Max-Age'));
+        $this->assertEquals(42, $response->getHeaderLine('Access-Control-Max-Age'));
     }
 
     /**
@@ -490,8 +487,8 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertTrue($response->headers->has('Access-Control-Max-Age'));
-        $this->assertEquals(0, $response->headers->get('Access-Control-Max-Age'));
+        $this->assertTrue($response->hasHeader('Access-Control-Max-Age'));
+        $this->assertEquals(0, $response->getHeaderLine('Access-Control-Max-Age'));
     }
 
     /**
@@ -504,7 +501,7 @@ class CorsTest extends TestCase
 
         $response = $app->process($request, $this->getRequestHandler([]));
 
-        $this->assertFalse($response->headers->has('Access-Control-Max-Age'));
+        $this->assertFalse($response->hasHeader('Access-Control-Max-Age'));
     }
 
     /**
@@ -513,29 +510,25 @@ class CorsTest extends TestCase
     public function it_skips_empty_access_control_request_header(): void
     {
         $app = $this->createStackedApp();
-        $request = $this->createValidPreflightRequest();
-        $request->headers->set('Access-Control-Request-Headers', '');
+        $request = $this->createValidPreflightRequest()
+            ->withHeader('Access-Control-Request-Headers', '');
 
         $response = $app->process($request, $this->getRequestHandler([]));
         $this->assertEquals(204, $response->getStatusCode());
     }
 
-    private function createValidActualRequest(): Request
+    private function createValidActualRequest(): ServerRequestInterface
     {
-        $request = new Request();
-        $request->headers->set('Origin', 'http://localhost');
-
-        return $request;
+        return (new ServerRequest())
+            ->withHeader('Origin', 'http://localhost');
     }
 
-    private function createValidPreflightRequest(): Request
+    private function createValidPreflightRequest(): ServerRequestInterface
     {
-        $request = new Request();
-        $request->headers->set('Origin', 'http://localhost');
-        $request->headers->set('Access-Control-Request-Method', 'get');
-        $request->setMethod('OPTIONS');
-
-        return $request;
+        return (new ServerRequest())
+            ->withHeader('Origin', 'http://localhost')
+            ->withHeader('Access-Control-Request-Method', 'GET')
+            ->withMethod('OPTIONS');
     }
 
     private function createStackedApp(array $options = []): CorsMiddleware
@@ -567,7 +560,7 @@ class CorsTest extends TestCase
 
             public function handle(ServerRequestInterface $request): ResponseInterface
             {
-                return new \MakiseCo\Http\Response('', 200, $this->responseHeaders);
+                return new TextResponse('', 200, $this->responseHeaders);
             }
         };
     }

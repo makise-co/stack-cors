@@ -17,7 +17,7 @@
     ],
     "require": {
         "php": "^7.4",
-        "makise-co/framework": "~0.0.7",
+        "makise-co/framework": "~1.0.0",
         "psr/http-message": "^1.0.1",
         "psr/http-server-middleware": "^1.0.1"
     },

@@ -146,7 +146,10 @@ class CorsService
         } else {
             // For dynamic headers, check the origin first
             if ($this->isOriginAllowed($request)) {
-                $response = $response->withHeader('Access-Control-Allow-Origin', $request->getHeader('Origin'));
+                $origin = $request->getHeader('Origin');
+                if (!empty($origin)) {
+                    $response = $response->withHeader('Access-Control-Allow-Origin', $origin);
+                }
             }
 
             $response = $this->varyHeader($response, 'Origin');
@@ -177,7 +180,11 @@ class CorsService
             $allowMethods = $this->options['allowedMethods'];
         }
 
-        return $response->withHeader('Access-Control-Allow-Methods', $allowMethods);
+        if (!empty($allowMethods)) {
+            return $response->withHeader('Access-Control-Allow-Methods', $allowMethods);
+        }
+
+        return $response;
     }
 
     private function configureAllowedHeaders(ResponseInterface $response, ServerRequestInterface $request): ResponseInterface
@@ -193,7 +200,11 @@ class CorsService
             $allowHeaders = $this->options['allowedHeaders'];
         }
 
-        return $response->withHeader('Access-Control-Allow-Headers', $allowHeaders);
+        if (!empty($allowHeaders)) {
+            return $response->withHeader('Access-Control-Allow-Headers', $allowHeaders);
+        }
+
+        return $response;
     }
 
     private function configureAllowCredentials(ResponseInterface $response, ServerRequestInterface $request): ResponseInterface

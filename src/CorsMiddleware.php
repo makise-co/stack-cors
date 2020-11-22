@@ -11,8 +11,6 @@ declare(strict_types=1);
 
 namespace Asm89\Stack;
 
-use MakiseCo\Http\Request;
-use MakiseCo\Http\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -30,14 +28,10 @@ class CorsMiddleware implements MiddlewareInterface
     /**
      * @param ServerRequestInterface $request
      * @param RequestHandlerInterface $handler
-     * @return ResponseInterface|Response
+     * @return ResponseInterface
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        if (!$request instanceof Request) {
-            return $handler->handle($request);
-        }
-
         if ($this->cors->isPreflightRequest($request)) {
             $response = $this->cors->handlePreflightRequest($request);
 
@@ -45,12 +39,9 @@ class CorsMiddleware implements MiddlewareInterface
         }
 
         $response = $handler->handle($request);
-        if (!$response instanceof Response) {
-            return $response;
-        }
 
         if ($request->getMethod() === 'OPTIONS') {
-            $this->cors->varyHeader($response, 'Access-Control-Request-Method');
+            $response = $this->cors->varyHeader($response, 'Access-Control-Request-Method');
         }
 
         return $this->cors->addActualRequestHeaders($response, $request);
